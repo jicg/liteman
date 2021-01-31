@@ -1,15 +1,13 @@
 package com.jicg.os.liteman.gen.anno;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * @author jicg on 2021/1/12
  */
+@Repeatable(value = LmMenuDirs.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.TYPE_PARAMETER, ElementType.TYPE_USE})
 public @interface LmMenuDir {
 
     String code() default "";
@@ -25,4 +23,8 @@ public @interface LmMenuDir {
     long sort() default 1000L;
 
     long zIndex() default 1000L;
+
+    LmMenuUp upMenu() default @LmMenuUp();
+
+    LmMenu[] menus() default {};
 }

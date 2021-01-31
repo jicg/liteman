@@ -7,9 +7,6 @@ import com.jicg.os.liteman.gen.anno.LmMenuDir;
 import com.jicg.os.liteman.gen.service.LmService;
 import com.jicg.os.liteman.orm.repository.MenuRepository;
 import com.jicg.os.liteman.orm.system.MenuEntity;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -35,10 +32,10 @@ public class ScanMenu {
 
     public void scanMenuPackages(List<MenuEntity> menuEntities) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         cache = new HashMap<>();
-        menuEntities.stream().forEach(it -> {
+        menuEntities.forEach(it -> {
             if (StrUtil.isNotEmpty(it.getUpCode())) {
                 MenuEntity menuEntity = menuRepository.getFirstByCode(it.getUpCode());
-                cache.put(it.getCode(),it);
+                cache.put(it.getCode(),menuEntity);
             }
         });
         ClassPathScanningCandidateComponentProvider scanningCandidateComponentProvider =
@@ -114,8 +111,6 @@ public class ScanMenu {
         menuDir.setChildList(menuEntityList);
         if (cache.containsKey(code) && menuDir.getZIndex() <= cache.get(code).getZIndex()) return;
         cache.put(code, menuDir);
-
-
     }
 
     private String getMenuDirUpCode(Class<?> beanClazz) {

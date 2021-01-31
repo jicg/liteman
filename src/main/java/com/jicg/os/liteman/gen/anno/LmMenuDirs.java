@@ -9,11 +9,8 @@ import java.lang.annotation.Target;
  * @author jicg on 2021/1/12
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD,ElementType.TYPE})
-public @interface LmMenuSub {
-    String icon() default "";
+@Target({ElementType.TYPE, ElementType.TYPE_PARAMETER, ElementType.TYPE_USE})
+public @interface LmMenuDirs {
 
-    String name();
-
-    int id() default 0;
+    LmMenuDir[] value() default {};
 }
