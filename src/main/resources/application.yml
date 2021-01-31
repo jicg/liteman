@@ -1,0 +1,26 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.1.88:3306/liteman?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: root
+    password: abc123
+    #mysql5
+    #driver-class-name: com.mysql.jdbc.Driver
+    #mysql6
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database: mysql
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+#  redis:
+#    port: 6379
+#    host: 192.168.1.88
+logging:
+  level:
+    com.jicg.os.liteman: debug
