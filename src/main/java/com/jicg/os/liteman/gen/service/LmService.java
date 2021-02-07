@@ -56,8 +56,7 @@ public class LmService implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        List<MenuEntity> menusQ = menuRepository.findAllByCodeIsNull();
-        scanMenu.scanMenuPackages(menusQ);
+        scanMenu.scanMenuPackages();
 
 
 //        MENU_ENTITIES.removeIf(it -> menusQ.stream().anyMatch(q -> q.getCode().equals(it.getCode())));

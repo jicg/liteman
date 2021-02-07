@@ -12,7 +12,11 @@ import java.util.List;
 public @interface LmMenu {
     String value() default "";
 
+    String name() default "";
+
     String code() default "";
+
+    String upCode() default "";
 
     String icon() default "";
 
