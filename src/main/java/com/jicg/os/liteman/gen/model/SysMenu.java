@@ -15,8 +15,8 @@ import com.jicg.os.liteman.gen.anno.LmSubSystem;
                 @LmMenu(code = "sys_menu", value = "菜单"),
                 @LmMenu(code = "sys_user", value = "用户"),
         })
-@LmMenu(code = "sys_menu", value = "菜单")
-@LmMenu(code = "sys_user", value = "用户", upCode = "")
+@LmMenu(code = "sys_menu1", value = "菜单")
+@LmMenu(code = "sys_user1", value = "用户")
 public class SysMenu {
     public static final String SYSTEM_MODULE = "SYSTEM_MODULE";
     public static final String SYSTEM_MENU = "SYSTEM_MENU";

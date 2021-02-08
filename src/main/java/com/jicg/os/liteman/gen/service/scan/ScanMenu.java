@@ -217,7 +217,7 @@ public class ScanMenu {
         String code = StrUtil.isNotEmpty(lmMenu.code()) ?
                 lmMenu.code() : StrUtil.toUnderlineCase(beanClazz.getSimpleName());
         menu.setCode(code);
-        menu.setName(StrUtil.isNotEmpty(lmMenu.name()) ? lmMenu.name() : code);
+        menu.setName(StrUtil.isNotEmpty(lmMenu.value()) ? lmMenu.value() : code);
         menu.setIcon(StrUtil.isNotEmpty(lmMenu.icon()) ? lmMenu.icon() : "");
         menu.setSort(lmMenu.sort());
         menu.setActive(lmMenu.active());

@@ -1,5 +1,7 @@
 package com.jicg.os.liteman.gen.anno;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.*;
 import java.util.List;
 
@@ -10,9 +12,6 @@ import java.util.List;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
 public @interface LmMenu {
-    String value() default "";
-
-    String name() default "";
 
     String code() default "";
 
@@ -30,4 +29,5 @@ public @interface LmMenu {
 
     boolean active() default true;
 
+    String value() default "";;
 }
