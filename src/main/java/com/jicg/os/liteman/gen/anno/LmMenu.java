@@ -8,7 +8,7 @@ import java.util.List;
  */
 @Repeatable(value = LmMenus.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD,ElementType.TYPE})
+@Target({ElementType.FIELD, ElementType.TYPE})
 public @interface LmMenu {
     String value() default "";
 
@@ -21,6 +21,8 @@ public @interface LmMenu {
     String icon() default "";
 
     String uri() default "";
+
+    String systemCode() default "";
 
     long sort() default 1000L;
 

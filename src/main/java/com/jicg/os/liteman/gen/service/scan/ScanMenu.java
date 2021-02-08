@@ -4,23 +4,25 @@ import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.jicg.os.liteman.gen.anno.LmMenu;
-import com.jicg.os.liteman.gen.anno.LmMenuDir;
-import com.jicg.os.liteman.gen.anno.LmMenuDirs;
-import com.jicg.os.liteman.gen.anno.LmMenus;
+import com.jicg.os.liteman.gen.anno.*;
 import com.jicg.os.liteman.gen.service.LmService;
 import com.jicg.os.liteman.orm.repository.MenuRepository;
 import com.jicg.os.liteman.orm.system.MenuEntity;
+import com.jicg.os.liteman.orm.system.SubSystemEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 
+import java.awt.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.sun.xml.internal.xsom.impl.UName.comparator;
 
 /**
  * @author jicg on 2021/1/13
@@ -28,44 +30,85 @@ import java.util.List;
 @Slf4j
 @Component
 public class ScanMenu {
-    public Map<String, MenuEntity> cache = new HashMap<>();
+
+    //    public List<MenuEntity> menus = new ArrayList<>();
+    public List<SubSystemEntity> subSystems = new ArrayList<>();
+    public Map<String, List<MenuEntity>> subSystemCache = new HashMap<String, List<MenuEntity>>();
+
     final MenuRepository menuRepository;
 
     public ScanMenu(MenuRepository menuRepository) {
         this.menuRepository = menuRepository;
     }
 
-    public void scanMenuPackages() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-        //获取数据库中的 菜单
-        List<MenuEntity> menuEntities = menuRepository.findAllByUpCodeIsNull();
-        //获取数据库中的 菜单
+    public void scanMenuPackages() throws ClassNotFoundException {
+        Map<String, MenuEntity> cache = new HashMap<>();
+        List<MenuEntity> menuEntities = new ArrayList<>();
 
-//
-//        cache = new HashMap<>();
-//        menuEntities.forEach(it -> {
-//            if (StrUtil.isNotEmpty(it.getUpCode())) {
-//                MenuEntity menuEntity = menuRepository.getFirstByCode(it.getUpCode());
-//                cache.put(it.getCode(),menuEntity);
-//            }
-//        });
-
+        //获取数据库中的 菜单
+        List<MenuEntity> scanMenuEntities = new ArrayList<>();
+        List<SubSystemEntity> scanSubSystemEntities = new ArrayList<>();
         for (String basePackage : LmService.basePackages) {
 
-            for (BeanDefinition beanDefinition : getScanBean(LmMenuDirs.class, basePackage)) {
+            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmSubSystem.class)) {
                 Class<?> beanClazz = Class.forName(beanDefinition.getBeanClassName());
-                getMenuDirEntity(beanClazz);
+                LmSubSystem lmSubSystem = beanClazz.getAnnotation(LmSubSystem.class);
+                scanSubSystemEntities.add(getSubSystem(lmSubSystem, beanClazz));
             }
-
-            for (BeanDefinition beanDefinition : getScanBean(LmMenus.class, basePackage)) {
+            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmMenuDir.class, LmMenuDir.class, LmMenus.class, LmMenu.class)) {
                 Class<?> beanClazz = Class.forName(beanDefinition.getBeanClassName());
+                List<MenuEntity> menus = new ArrayList<>();
+                LmMenuDir[] lmMenuDirs = beanClazz.getAnnotationsByType(LmMenuDir.class);
+                for (LmMenuDir lmMenuDir : lmMenuDirs) {
+                    menus.addAll(getMenuDirEntity(lmMenuDir, beanClazz));
+                }
                 LmMenu[] lmMenus = beanClazz.getAnnotationsByType(LmMenu.class);
                 for (LmMenu lmMenu : lmMenus) {
-                    getMenuEntity(lmMenu, beanClazz);
-                }
-            }
-        }
+                    MenuEntity menu = getMenuEntity(lmMenu, beanClazz);
+                    menus.add(menu);
 
-        System.out.println("=====" + JSONUtil.toJsonStr(cache));
+                }
+
+                LmSubSystem lmSubSystem = beanClazz.getAnnotation(LmSubSystem.class);
+                if (lmSubSystem != null) {
+                    menus.stream().filter(menuEntity -> StrUtil.isEmpty(menuEntity.getSystemCode())).forEach(menu -> {
+                        menu.setSystemCode(lmSubSystem.code());
+                    });
+                }
+                scanMenuEntities.addAll(menus);
+            }
+            scanMenuEntities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
+        }
+        scanMenuEntities.forEach(menuEntity -> {
+            if (cache.containsKey(menuEntity.getCode())
+                    && menuEntity.getZIndex() <= cache.get(menuEntity.getCode()).getZIndex()) {
+                return;
+            }
+            cache.put(menuEntity.getCode(), menuEntity);
+            menuEntities.add(menuEntity);
+        });
+        //获取数据库中的 菜单
+        List<MenuEntity> dbMenuEntities = menuRepository.findAllByUpCodeIsNull();
+        dbMenuEntities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
+        dbMenuEntities.forEach(menuEntity -> {
+            if (cache.containsKey(menuEntity.getCode())
+                    && menuEntity.getZIndex() <= cache.get(menuEntity.getCode()).getZIndex()) {
+                return;
+            }
+            cache.put(menuEntity.getCode(), menuEntity);
+            menuEntities.add(menuEntity);
+        });
+        //去重复
+        subSystems = scanSubSystemEntities.stream().sorted((o1, o2) -> (int) ( o2.getZIndex()-o1.getZIndex() )).collect(
+                Collectors.collectingAndThen(
+                        Collectors.toCollection(
+                                () -> new TreeSet<>((o1, o2) -> o2.getCode().compareTo(o1.getCode()))
+                        ), ArrayList::new
+                ));
+        subSystemCache = toTreeMenu(cache, menuEntities);
+        System.out.println(JSONUtil.toJsonStr(subSystems));
+        System.out.println(JSONUtil.toJsonStr(subSystemCache));
+
 
 ////
 ////        Map<String, MenuEntity> idMenus = new HashMap<>();
@@ -100,117 +143,88 @@ public class ScanMenu {
 
     }
 
-    public Set<BeanDefinition> getScanBean(
-            Class<? extends Annotation> annotationType, String basePackage) {
+
+    private Map<String, List<MenuEntity>> toTreeMenu(Map<String, MenuEntity> cache, List<MenuEntity> menuEntities) {
+        if (cache == null || menuEntities == null) return new HashMap<>();
+        menuEntities.stream().filter(it -> StrUtil.isNotEmpty(it.getUpCode())).forEach(menu -> {
+            if (cache.containsKey(menu.getUpCode())) {
+                cache.get(menu.getUpCode()).getChildList().add(menu);
+            }
+        });
+        return menuEntities.stream().filter(
+                it -> StrUtil.isNotEmpty(it.getSystemCode()) && StrUtil.isEmpty(it.getUpCode())
+        ).collect(Collectors.groupingBy(MenuEntity::getSystemCode));
+    }
+
+    public Set<BeanDefinition> getScanBean(String basePackage, Class<? extends Annotation>... annotationTypes) {
         ClassPathScanningCandidateComponentProvider scanningCandidateComponentProvider =
                 new ClassPathScanningCandidateComponentProvider(false);
-        scanningCandidateComponentProvider.addIncludeFilter(new AnnotationTypeFilter(annotationType));
+        for (Class<? extends Annotation> annotationType : annotationTypes) {
+            scanningCandidateComponentProvider.addIncludeFilter(new AnnotationTypeFilter(annotationType));
+        }
         return scanningCandidateComponentProvider.findCandidateComponents(basePackage);
     }
 
-    public void sort(List<MenuEntity> entities) {
-        entities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
-        entities.forEach(menuEntity -> {
-            sort(menuEntity.getChildList());
-        });
+//    public void sort(List<MenuEntity> entities) {
+//        entities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
+//        entities.forEach(menuEntity -> {
+//            sort(menuEntity.getChildList());
+//        });
+//    }
+
+    private SubSystemEntity getSubSystem(LmSubSystem lmSubSystem, Class<?> beanClazz) {
+        SubSystemEntity subSystemEntity = new SubSystemEntity();
+        subSystemEntity.setCode(StrUtil.isNotEmpty(lmSubSystem.code()) ?
+                lmSubSystem.code() : StrUtil.toUnderlineCase(beanClazz.getSimpleName()));
+        subSystemEntity.setName(lmSubSystem.name());
+        subSystemEntity.setActive(true);
+        subSystemEntity.setSort(lmSubSystem.sort());
+        subSystemEntity.setZIndex(lmSubSystem.zIndex());
+        return subSystemEntity;
     }
 
-    private void getMenuDirEntity(Class<?> beanClazz)
-            throws IllegalAccessException, InstantiationException {
+    private List<MenuEntity> getMenuDirEntity(LmMenuDir lmMenuDir, Class<?> beanClazz) {
+        List<MenuEntity> menuEntities = new ArrayList<>();
+        if (lmMenuDir == null) return new ArrayList<>();
+        if (!lmMenuDir.active()) return new ArrayList<>();
+        MenuEntity menuDir = new MenuEntity();
+        String code = StrUtil.isNotEmpty(lmMenuDir.code()) ?
+                lmMenuDir.code() : StrUtil.toUnderlineCase(beanClazz.getSimpleName());
+        menuDir.setCode(code);
+        menuDir.setName(StrUtil.isNotEmpty(lmMenuDir.name()) ? lmMenuDir.name() : code);
+        menuDir.setIcon(StrUtil.isNotEmpty(lmMenuDir.icon()) ? lmMenuDir.icon() : "");
+        menuDir.setSort(lmMenuDir.sort());
+        menuDir.setActive(lmMenuDir.active());
+        menuDir.setZIndex(lmMenuDir.zIndex());
+        menuDir.setSystemCode(lmMenuDir.systemCode());
 
-        LmMenuDir[] lmMenuDirs = beanClazz.getAnnotationsByType(LmMenuDir.class);
-        Object beanObject = beanClazz.newInstance();
-        for (LmMenuDir lmMenuDir : lmMenuDirs) {
-            if (lmMenuDir != null && !lmMenuDir.active()) return;
-
-            MenuEntity menuDir = new MenuEntity();
-            String code = lmMenuDir != null && StrUtil.isNotEmpty(lmMenuDir.code()) ?
-                    lmMenuDir.code() : StrUtil.toUnderlineCase(beanClazz.getSimpleName());
-
-
-//            final List<MenuEntity> menuEntityList = new ArrayList<>();
-
-            menuDir.setCode(code);
-            menuDir.setName(lmMenuDir != null && StrUtil.isNotEmpty(lmMenuDir.name()) ? lmMenuDir.name() : code);
-            menuDir.setIcon(lmMenuDir != null && StrUtil.isNotEmpty(lmMenuDir.icon()) ? lmMenuDir.icon() : "");
-            menuDir.setSort(lmMenuDir != null ? lmMenuDir.sort() : 1000L);
-            menuDir.setActive(lmMenuDir == null || lmMenuDir.active());
-            menuDir.setZIndex(lmMenuDir != null ? lmMenuDir.zIndex() : 1000L);
-
-//            Arrays.stream(ReflectUtil.getFields(beanClazz)).forEach(field -> {
-//                MenuEntity menuEntity = getMenuEntity(beanObject, field);
-//                if (menuEntity == null) return;
-//                menuEntityList.removeIf(it -> menuEntity.getCode().equals(it.getCode()));
-//                menuEntityList.add(menuEntity);
-//            });
-//            menuDir.setChildList(menuDir.getChildList());
-
-            if (lmMenuDir != null) {
-                for (LmMenu lmMenu : lmMenuDir.menus()) {
-                    getMenuEntity(lmMenu, beanClazz);
-                }
+        menuEntities.add(menuDir);
+        for (LmMenu lmMenu : lmMenuDir.menus()) {
+            MenuEntity menuEntity = getMenuEntity(lmMenu, beanClazz);
+            if (menuEntity != null) {
+                menuEntity.setUpCode(code);
+                menuEntities.add(menuEntity);
             }
-
-            if (cache.containsKey(code) && menuDir.getZIndex() <= cache.get(code).getZIndex()) return;
-            cache.put(code, menuDir);
         }
-
-
+        return menuEntities;
     }
 
 
-    private void getMenuEntity(LmMenu lmMenu, Class<?> beanClazz)
-            throws IllegalAccessException, InstantiationException {
-        if (lmMenu == null) return;
-        if (!lmMenu.active()) return;
-
+    private MenuEntity getMenuEntity(LmMenu lmMenu, Class<?> beanClazz) {
+        if (lmMenu == null) return null;
+        if (!lmMenu.active()) return null;
         MenuEntity menu = new MenuEntity();
         String code = StrUtil.isNotEmpty(lmMenu.code()) ?
                 lmMenu.code() : StrUtil.toUnderlineCase(beanClazz.getSimpleName());
-
         menu.setCode(code);
         menu.setName(StrUtil.isNotEmpty(lmMenu.name()) ? lmMenu.name() : code);
         menu.setIcon(StrUtil.isNotEmpty(lmMenu.icon()) ? lmMenu.icon() : "");
         menu.setSort(lmMenu.sort());
         menu.setActive(lmMenu.active());
         menu.setZIndex(lmMenu.zIndex());
-
-//            Arrays.stream(ReflectUtil.getFields(beanClazz)).forEach(field -> {
-//                MenuEntity menuEntity = getMenuEntity(beanObject, field);
-//                if (menuEntity == null) return;
-//                menuEntityList.removeIf(it -> menuEntity.getCode().equals(it.getCode()));
-//                menuEntityList.add(menuEntity);
-//            });
-//            menuDir.setChildList(menuDir.getChildList());
-
-
         menu.setUpCode(StrUtil.isNotEmpty(lmMenu.upCode()) ? lmMenu.upCode() : "");
-        if (cache.containsKey(code) && menu.getZIndex() <= cache.get(code).getZIndex()) return;
-        cache.put(code, menu);
+        menu.setSystemCode(lmMenu.systemCode());
+        return menu;
     }
-
-//    private String getMenuDirUpCode(Class<?> beanClazz) {
-//        LmMenuDir lmMenuDir = beanClazz.getAnnotation(LmMenuDir.class);
-//
-//        String code = lmMenuDir != null && StrUtil.isNotEmpty(lmMenuDir.upCode()) ?
-//                lmMenuDir.upCode() : beanClazz.getEnclosingClass() == null ? "object" : StrUtil.toUnderlineCase(beanClazz.getEnclosingClass().getSimpleName());
-//        return code;
-//    }
-//
-//    private MenuEntity getMenuEntity(Object beanObject, Field field) {
-//        if (field.getType() != String.class) return null;
-//        LmMenu lmMenu = field.getAnnotation(LmMenu.class);
-//        MenuEntity menuEntity = new MenuEntity();
-//        menuEntity.setCode(lmMenu != null && StrUtil.isNotEmpty(lmMenu.code()) ? lmMenu.code() : field.getName());
-//        menuEntity.setName(
-//                lmMenu != null && StrUtil.isNotEmpty(lmMenu.value()) ? lmMenu.value()
-//                        : (String) ReflectUtil.getFieldValue(beanObject, field));
-//        menuEntity.setIcon(lmMenu != null && StrUtil.isNotEmpty(lmMenu.icon()) ? lmMenu.icon() : "");
-//        menuEntity.setUri(lmMenu != null && StrUtil.isNotEmpty(lmMenu.uri()) ? lmMenu.uri() : "");
-//        menuEntity.setSort(lmMenu != null ? lmMenu.sort() : 1000L);
-//        menuEntity.setActive(lmMenu == null || lmMenu.active());
-//        menuEntity.setZIndex(lmMenu != null ? lmMenu.zIndex() : 1000L);
-//        return menuEntity;
-//    }
 
 }

@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jicg.os.liteman.gen.service.LmService;
 import com.jicg.os.liteman.orm.repository.MenuRepository;
 import com.jicg.os.liteman.orm.repository.TableRepository;
-import com.jicg.os.liteman.orm.system.ColumnEntity;
-import com.jicg.os.liteman.orm.system.ColumnType;
-import com.jicg.os.liteman.orm.system.MenuEntity;
-import com.jicg.os.liteman.orm.system.TableEntity;
+import com.jicg.os.liteman.orm.system.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,34 +19,26 @@ import java.util.List;
 @RestController
 public class IndexController {
 
-    private final MenuRepository menuRepository;
-    private final TableRepository tableRepository;
-    private final ObjectMapper objectMapper;
 
     private final LmService lmService;
 
-    public IndexController(MenuRepository menuRepository, TableRepository tableRepository, ObjectMapper objectMapper, LmService lmService) {
-        this.menuRepository = menuRepository;
-        this.tableRepository = tableRepository;
-        this.objectMapper = objectMapper;
+    public IndexController(LmService lmService) {
         this.lmService = lmService;
     }
 
-    @GetMapping("/system")
-    public List<MenuEntity> getIndex() {
-        return menuRepository.findAll();
+    @GetMapping("/sys/systems")
+    public List<SubSystemEntity> getIndex() {
+        return lmService.getSubSystems();
     }
 
-    @GetMapping("/tables")
-    public List<TableEntity> getTables() {
-        return lmService.getTables();
-    }
+//    @GetMapping("/tables")
+//    public List<TableEntity> getTables() {
+//        return lmService.getTables();
+//    }
 
-    @GetMapping("/menus")
-    public List<MenuEntity> getMenus() {
-        List<MenuEntity> menuEntityList = lmService.getMenus();
-       // menuRepository.saveAll(menuEntityList);
-        return menuEntityList;
+    @GetMapping("/sys/menus")
+    public List<MenuEntity> getMenus(String subSystemCode) {
+        return lmService.getMenus(subSystemCode);
     }
 
 //    @GetMapping("/test")

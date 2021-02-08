@@ -14,6 +14,8 @@ public @interface LmMenuDir {
 
     String name();
 
+    String systemCode() default "";
+
     boolean active() default true;
 
     String icon() default "";

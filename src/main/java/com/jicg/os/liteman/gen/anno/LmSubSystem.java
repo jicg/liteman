@@ -11,7 +11,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface LmSubSystem {
+    String code() default "";
+
+    String icon() default "";
+
     String name() default "";
 
-    String label() default "";
+    long zIndex() default 1000;
+    long sort() default 1000;
 }

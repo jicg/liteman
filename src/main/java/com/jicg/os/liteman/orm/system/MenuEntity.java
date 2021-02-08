@@ -27,6 +27,7 @@ public class MenuEntity extends SysBaseEntity {
     private String uri;
     private String description;
     private Long zIndex = 1000L;
+    private String systemCode = "";
     //    @Column(insertable = false, updatable = false)
 //    private Long menuCode;
 //    @Column(insertable = false, updatable = false)
