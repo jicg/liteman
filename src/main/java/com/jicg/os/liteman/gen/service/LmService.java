@@ -50,4 +50,8 @@ public class LmService implements ApplicationRunner {
     public List<SubSystemEntity> getSubSystems() {
         return scanMenu.subSystems;
     }
+
+    public MenuEntity getMenu(String menuCode) {
+        return scanMenu.cacheMenus.get(menuCode);
+    }
 }

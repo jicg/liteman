@@ -7,8 +7,7 @@ import com.jicg.os.liteman.orm.repository.MenuRepository;
 import com.jicg.os.liteman.orm.repository.TableRepository;
 import com.jicg.os.liteman.orm.system.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -17,6 +16,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
+@RequestMapping("api")
 public class IndexController {
 
 
@@ -31,14 +31,19 @@ public class IndexController {
         return lmService.getSubSystems();
     }
 
-//    @GetMapping("/tables")
-//    public List<TableEntity> getTables() {
-//        return lmService.getTables();
-//    }
+    @GetMapping("/sys/table/{tableCode}")
+    public TableEntity getTables(@PathVariable String tableCode) {
+        return lmService.getTable(tableCode);
+    }
 
     @GetMapping("/sys/menus")
     public List<MenuEntity> getMenus(String subSystemCode) {
         return lmService.getMenus(subSystemCode);
+    }
+
+    @GetMapping("/sys/menu/{menuCode}")
+    public MenuEntity getMenu(@PathVariable String menuCode) {
+        return lmService.getMenu(menuCode);
     }
 
 //    @GetMapping("/test")

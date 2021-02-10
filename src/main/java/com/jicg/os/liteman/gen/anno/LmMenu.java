@@ -21,6 +21,8 @@ public @interface LmMenu {
 
     String uri() default "";
 
+    String table() default "";
+
     String systemCode() default "";
 
     long sort() default 1000L;

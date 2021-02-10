@@ -13,7 +13,8 @@ import java.util.List;
 public interface MenuRepository extends JpaRepository<MenuEntity, Long> {
     //    List<MenuEntity> findAllByMenuIdIsNull();
     List<MenuEntity> findAllByCodeIsNull();
-    List<MenuEntity> findAllByUpCodeIsNull();
+//    List<MenuEntity> findAllByUpCodeIsNull();
+//    List<MenuEntity> findAll();
 
     MenuEntity getFirstByCode(String code);
 }

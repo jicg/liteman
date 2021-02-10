@@ -8,6 +8,7 @@ import com.jicg.os.liteman.gen.anno.LmTable;
  * @author jicg on 2020/12/30
  */
 @LmTable(
+        name = "sys_table",
         label = "表"
 )
 public class SysTable {

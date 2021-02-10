@@ -30,7 +30,7 @@ import static com.sun.xml.internal.xsom.impl.UName.comparator;
 @Slf4j
 @Component
 public class ScanMenu {
-
+    public Map<String, MenuEntity> cacheMenus = new HashMap<>();
     //    public List<MenuEntity> menus = new ArrayList<>();
     public List<SubSystemEntity> subSystems = new ArrayList<>();
     public Map<String, List<MenuEntity>> subSystemCache = new HashMap<String, List<MenuEntity>>();
@@ -55,7 +55,7 @@ public class ScanMenu {
                 LmSubSystem lmSubSystem = beanClazz.getAnnotation(LmSubSystem.class);
                 scanSubSystemEntities.add(getSubSystem(lmSubSystem, beanClazz));
             }
-            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmMenuDir.class, LmMenuDir.class, LmMenus.class, LmMenu.class)) {
+            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmMenuDirs.class, LmMenuDir.class, LmMenus.class, LmMenu.class)) {
                 Class<?> beanClazz = Class.forName(beanDefinition.getBeanClassName());
                 List<MenuEntity> menus = new ArrayList<>();
                 LmMenuDir[] lmMenuDirs = beanClazz.getAnnotationsByType(LmMenuDir.class);
@@ -88,7 +88,7 @@ public class ScanMenu {
             menuEntities.add(menuEntity);
         });
         //获取数据库中的 菜单
-        List<MenuEntity> dbMenuEntities = menuRepository.findAllByUpCodeIsNull();
+        List<MenuEntity> dbMenuEntities = menuRepository.findAll();
         dbMenuEntities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
         dbMenuEntities.forEach(menuEntity -> {
             if (cache.containsKey(menuEntity.getCode())
@@ -99,15 +99,14 @@ public class ScanMenu {
             menuEntities.add(menuEntity);
         });
         //去重复
-        subSystems = scanSubSystemEntities.stream().sorted((o1, o2) -> (int) ( o2.getZIndex()-o1.getZIndex() )).collect(
+        subSystems = scanSubSystemEntities.stream().sorted((o1, o2) -> (int) (o2.getZIndex() - o1.getZIndex())).collect(
                 Collectors.collectingAndThen(
                         Collectors.toCollection(
                                 () -> new TreeSet<>((o1, o2) -> o2.getCode().compareTo(o1.getCode()))
                         ), ArrayList::new
                 ));
         subSystemCache = toTreeMenu(cache, menuEntities);
-        System.out.println(JSONUtil.toJsonStr(subSystems));
-        System.out.println(JSONUtil.toJsonStr(subSystemCache));
+        cacheMenus = cache;
 
 
 ////
@@ -219,6 +218,8 @@ public class ScanMenu {
         menu.setCode(code);
         menu.setName(StrUtil.isNotEmpty(lmMenu.value()) ? lmMenu.value() : code);
         menu.setIcon(StrUtil.isNotEmpty(lmMenu.icon()) ? lmMenu.icon() : "");
+        menu.setUri(StrUtil.isNotEmpty(lmMenu.uri()) ? lmMenu.uri() : "");
+        menu.setTableCode(StrUtil.isNotEmpty(lmMenu.table()) ? lmMenu.table() : "");
         menu.setSort(lmMenu.sort());
         menu.setActive(lmMenu.active());
         menu.setZIndex(lmMenu.zIndex());

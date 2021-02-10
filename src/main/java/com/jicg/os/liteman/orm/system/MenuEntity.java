@@ -24,6 +24,7 @@ public class MenuEntity extends SysBaseEntity {
     private String name;
     private String icon;
     private Long sort;
+    private String tableCode;
     private String uri;
     private String description;
     private Long zIndex = 1000L;
