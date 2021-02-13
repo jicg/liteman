@@ -33,7 +33,9 @@ public class IndexController {
 
     @GetMapping("/sys/table/{tableCode}")
     public TableEntity getTables(@PathVariable String tableCode) {
-        return lmService.getTable(tableCode);
+        TableEntity dataTable = lmService.getTable(tableCode);
+        if (dataTable == null) throw new RuntimeException("表不存在！");
+        return dataTable;
     }
 
     @GetMapping("/sys/menus")
@@ -42,7 +44,7 @@ public class IndexController {
     }
 
     @GetMapping("/sys/menu/{menuCode}")
-    public MenuEntity getMenu(@PathVariable String menuCode)  {
+    public MenuEntity getMenu(@PathVariable String menuCode) {
         return lmService.getMenu(menuCode);
     }
 
