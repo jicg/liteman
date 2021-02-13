@@ -75,7 +75,7 @@ public class ScanTable {
                     }
                     LmColumnAttr lmColumnAttr = field.getAnnotation(LmColumnAttr.class);
                     if (lmColumnAttr != null) {
-                        ColumnAttrEntity columnAttrEntity = new ColumnAttrEntity();
+                        ColumnData.ColumnAttr columnAttrEntity = new ColumnData.ColumnAttr();
                         columnAttrEntity.setCanEdit(lmColumnAttr.canEdit());
                         columnAttrEntity.setCanEditVisible(lmColumnAttr.canEditVisible());
                         columnAttrEntity.setCanExport(lmColumnAttr.canExport());
@@ -88,7 +88,7 @@ public class ScanTable {
                     }
                     LmColumnLink lmColumnLink = field.getAnnotation(LmColumnLink.class);
                     if (field.getAnnotation(LmColumnLink.class) != null) {
-                        ColumnLinkEntity columnLink = new ColumnLinkEntity();
+                        ColumnData.ColumnLink columnLink = new ColumnData.ColumnLink();
                         columnLink.setTableName(StrUtil.toUnderlineCase(lmColumnLink.tableName()));
                         columnLink.setColumnName(StrUtil.toUnderlineCase(lmColumnLink.columnName()));
                         columnEntity.setColumnLink(columnLink);

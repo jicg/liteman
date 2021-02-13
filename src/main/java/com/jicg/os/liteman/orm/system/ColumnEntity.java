@@ -19,11 +19,10 @@ public class ColumnEntity extends SysBaseEntity {
     private String description;
     private ColumnType columnType = ColumnType.Auto;
     private String defVal;
-    @Embedded
-    private ColumnAttrEntity columnAttrEntity = new ColumnAttrEntity();
-    @Embedded
-    private ColumnLinkEntity columnLink;
-
+    @OneToOne
+    private ColumnData.ColumnAttr columnAttrEntity = new ColumnData.ColumnAttr();
+    @OneToOne
+    private ColumnData.ColumnLink columnLink;
     @OneToOne
     private ColumnData.Select columnSelect;
 
