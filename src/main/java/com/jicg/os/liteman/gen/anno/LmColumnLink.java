@@ -11,5 +11,6 @@ import java.util.function.Function;
 @Target({ElementType.FIELD})
 public @interface LmColumnLink {
     String tableName();
+
     String columnName() default "id";
 }
