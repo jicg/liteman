@@ -42,7 +42,7 @@ public class IndexController {
     }
 
     @GetMapping("/sys/menu/{menuCode}")
-    public MenuEntity getMenu(@PathVariable String menuCode) {
+    public MenuEntity getMenu(@PathVariable String menuCode)  {
         return lmService.getMenu(menuCode);
     }
 

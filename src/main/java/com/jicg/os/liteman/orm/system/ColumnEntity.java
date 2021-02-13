@@ -1,6 +1,5 @@
 package com.jicg.os.liteman.orm.system;
 
-import com.jicg.os.liteman.orm.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -24,5 +23,9 @@ public class ColumnEntity extends SysBaseEntity {
     private ColumnAttrEntity columnAttrEntity = new ColumnAttrEntity();
     @Embedded
     private ColumnLinkEntity columnLink;
+
+    @OneToOne
+    private ColumnData.Select columnSelect;
+
 }
 

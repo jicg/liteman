@@ -1,8 +1,12 @@
 package com.jicg.os.liteman.gen.model;
 
 import com.jicg.os.liteman.gen.anno.LmColumn;
+import com.jicg.os.liteman.gen.anno.LmColumnAttr;
 import com.jicg.os.liteman.gen.anno.LmIgnore;
 import com.jicg.os.liteman.gen.anno.LmTable;
+import com.jicg.os.liteman.orm.system.ColumnType;
+
+import java.util.Date;
 
 /**
  * @author jicg on 2020/12/30
@@ -18,4 +22,11 @@ public class SysTable {
     private String label;
     @LmColumn(label = "备注")
     private String description;
+
+    @LmColumn(label = "备注2",columnType = ColumnType.Select)
+    @LmColumnAttr()
+    private String description2;
+
+    @LmColumn(label = "日期",columnType = ColumnType.Date)
+    private Date ownerDate;
 }

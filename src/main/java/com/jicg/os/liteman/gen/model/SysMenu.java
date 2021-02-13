@@ -8,10 +8,11 @@ import com.jicg.os.liteman.gen.anno.LmSubSystem;
  * @author jicg on 2021/1/12
  */
 @LmSubSystem(code = SysMenu.SYSTEM_MODULE, name = "系统管理", zIndex = 1000)
+
 @LmMenuDir(name = "系统管理",
         code = SysMenu.SYSTEM_MENU,
         menus = {
-                @LmMenu(code = "sys_menu", value = "菜单1", table = "sys_table1"),
+                @LmMenu(code = "sys_menu1", value = "菜单1", table = "sys_table1"),
         })
 @LmMenuDir(name = "业务管理",
         code = SysMenu.SYSTEM_MENU2,
@@ -25,6 +26,8 @@ import com.jicg.os.liteman.gen.anno.LmSubSystem;
                 @LmMenu(code = "sys_menu8", value = "菜单8", table = "sys_table8"),
                 @LmMenu(code = "sys_menu9", value = "菜单9", table = "sys_table9"),
         })
+
+@LmMenu(code = "sys_menu", value = "菜单", table = "sys_table")
 public class SysMenu {
     public static final String SYSTEM_MODULE = "system";
     public static final String SYSTEM_MENU = "system";
