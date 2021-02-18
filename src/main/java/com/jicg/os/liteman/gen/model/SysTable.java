@@ -40,6 +40,10 @@ public class SysTable {
     @LmColumnData.SelectUse(code = "isActive", def = "Y")
     private String isActive;
 
+    @LmColumn(label = "测试")
+    @LmColumnData.Link(tableName = "sys_test")
+    private long sysTestId;
+
     @LmColumn(label = "日期", columnType = ColumnData.Type.Date)
     private Date ownerDate;
 }
