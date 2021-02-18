@@ -6,13 +6,13 @@ import com.jicg.os.liteman.gen.anno.*;
 import com.jicg.os.liteman.gen.service.LmService;
 import com.jicg.os.liteman.orm.repository.TableRepository;
 import com.jicg.os.liteman.orm.system.*;
+import com.jicg.os.liteman.utils.ScanUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author jicg on 2021/2/8
@@ -21,6 +21,7 @@ import java.util.*;
 @Component
 public class ScanTable {
     public final static Map<String, TableEntity> tableMap = new HashMap<>();
+    public final static Map<String, ColumnData.Select> selectMap = new HashMap<>();
     private final TableRepository tableRepository;
 
     public ScanTable(TableRepository tableRepository) {
@@ -28,7 +29,10 @@ public class ScanTable {
     }
 
     public void scanPackages() throws Exception {
-        doScanPackages().forEach(it -> {
+        doScanSelects().forEach(it -> {
+            selectMap.put(it.getCode(), it);
+        });
+        doScanTables().forEach(it -> {
             tableMap.put(it.getName(), it);
         });
         tableRepository.findAll().forEach(it -> {
@@ -36,16 +40,41 @@ public class ScanTable {
         });
     }
 
-
-    public List<TableEntity> doScanPackages() throws Exception {
-        List<TableEntity> tableEntities = new ArrayList<>();
-        ClassPathScanningCandidateComponentProvider scanningCandidateComponentProvider = new ClassPathScanningCandidateComponentProvider(false);
+    private List<ColumnData.Select> doScanSelects() throws ClassNotFoundException {
+        List<ColumnData.Select> selectList = new ArrayList<>();
         for (String basePackage : LmService.basePackages) {
-            scanningCandidateComponentProvider.addIncludeFilter(new AnnotationTypeFilter(LmTable.class));
-            Set<BeanDefinition> beanDefinitions = scanningCandidateComponentProvider.findCandidateComponents(basePackage);
+            for (BeanDefinition beanDefinition : ScanUtils.getScanBean(basePackage, LmColumnData.Select.class, LmColumnData.Selects.class)) {
+                Class<?> clazz = Class.forName(beanDefinition.getBeanClassName());
+                LmColumnData.Select[] selects = clazz.getAnnotationsByType(LmColumnData.Select.class);
+                for (LmColumnData.Select select : selects) {
+                    ColumnData.Select sel = getSelect(clazz, select);
+                    selectList.add(sel);
+                }
+            }
+        }
+        return selectList;
+    }
+
+    private ColumnData.Select getSelect(Class<?> clazz, LmColumnData.Select select) {
+        ColumnData.Select sel = new ColumnData.Select();
+        sel.setCode(select.code());
+        sel.setLabel(select.label());
+        sel.setSelectOptions(Arrays.stream(select.options()).map(it -> {
+            ColumnData.SelectOption selectOption = new ColumnData.SelectOption();
+            selectOption.setLabel(it.label());
+            selectOption.setValue(it.value());
+            return selectOption;
+        }).collect(Collectors.toSet()));
+        return sel;
+    }
+
+    public List<TableEntity> doScanTables() throws Exception {
+        List<TableEntity> tableEntities = new ArrayList<>();
+
+        for (String basePackage : LmService.basePackages) {
+            Set<BeanDefinition> beanDefinitions = ScanUtils.getScanBean(basePackage, LmTable.class);
             for (BeanDefinition beanDefinition : beanDefinitions) {
                 Class<?> clazz = Class.forName(beanDefinition.getBeanClassName());
-
 
                 TableEntity tableEntity = new TableEntity();
                 LmTable lmTable = clazz.getAnnotation(LmTable.class);
@@ -73,7 +102,7 @@ public class ScanTable {
                         columnEntity.setDescription(lmColumn.description());
                         columnEntity.setColumnType(lmColumn.columnType());
                     }
-                    LmColumnAttr lmColumnAttr = field.getAnnotation(LmColumnAttr.class);
+                    LmColumnData.Attr lmColumnAttr = field.getAnnotation(LmColumnData.Attr.class);
                     if (lmColumnAttr != null) {
                         ColumnData.ColumnAttr columnAttrEntity = new ColumnData.ColumnAttr();
                         columnAttrEntity.setCanEdit(lmColumnAttr.canEdit());
@@ -86,8 +115,16 @@ public class ScanTable {
                         columnAttrEntity.setCanSearch(lmColumnAttr.canSearch());
                         columnEntity.setColumnAttrEntity(columnAttrEntity);
                     }
-                    LmColumnLink lmColumnLink = field.getAnnotation(LmColumnLink.class);
-                    if (field.getAnnotation(LmColumnLink.class) != null) {
+                    LmColumnData.SelectUse selectUse = field.getAnnotation(LmColumnData.SelectUse.class);
+                    if (selectUse != null) {
+                        ColumnData.SelectUse selUse = new ColumnData.SelectUse();
+                        selUse.setColumnSelect(selectMap.get(selectUse.code()));
+                        selUse.setColumnSelectDef(selectUse.def());
+                        columnEntity.setSelectUse(selUse);
+                    }
+
+                    LmColumnData.Link lmColumnLink = field.getAnnotation(LmColumnData.Link.class);
+                    if (lmColumnLink != null) {
                         ColumnData.ColumnLink columnLink = new ColumnData.ColumnLink();
                         columnLink.setTableName(StrUtil.toUnderlineCase(lmColumnLink.tableName()));
                         columnLink.setColumnName(StrUtil.toUnderlineCase(lmColumnLink.columnName()));
@@ -99,8 +136,8 @@ public class ScanTable {
                     if (columnEntity.getLabel() == null || columnEntity.getLabel().isEmpty()) {
                         columnEntity.setLabel(field.getName());
                     }
-                    if (columnEntity.getColumnType() == null || columnEntity.getColumnType() == ColumnType.Auto) {
-                        columnEntity.setColumnType(ColumnType.Auto);
+                    if (columnEntity.getColumnType() == null || columnEntity.getColumnType() == ColumnData.Type.Auto) {
+                        columnEntity.setColumnType(ColumnData.Type.Auto);
                     }
                     columnEntity.setActive(true);
                     columnEntities.add(columnEntity);

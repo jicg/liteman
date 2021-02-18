@@ -17,14 +17,16 @@ public class ColumnEntity extends SysBaseEntity {
     private String name;
     private String label;
     private String description;
-    private ColumnType columnType = ColumnType.Auto;
+    private ColumnData.Type columnType = ColumnData.Type.Auto;
     private String defVal;
     @OneToOne
     private ColumnData.ColumnAttr columnAttrEntity = new ColumnData.ColumnAttr();
     @OneToOne
     private ColumnData.ColumnLink columnLink;
-    @OneToOne
-    private ColumnData.Select columnSelect;
+
+    @Embedded
+    private ColumnData.SelectUse selectUse;
+
 
 }
 

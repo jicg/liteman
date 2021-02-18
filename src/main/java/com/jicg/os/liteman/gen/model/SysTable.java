@@ -1,9 +1,7 @@
 package com.jicg.os.liteman.gen.model;
 
-import com.jicg.os.liteman.gen.anno.LmColumn;
-import com.jicg.os.liteman.gen.anno.LmColumnAttr;
-import com.jicg.os.liteman.gen.anno.LmIgnore;
-import com.jicg.os.liteman.gen.anno.LmTable;
+import com.jicg.os.liteman.gen.anno.*;
+import com.jicg.os.liteman.orm.system.ColumnData;
 import com.jicg.os.liteman.orm.system.ColumnType;
 
 import java.util.Date;
@@ -11,22 +9,37 @@ import java.util.Date;
 /**
  * @author jicg on 2020/12/30
  */
+@LmColumnData.Select(
+        code = "isActive",
+        label = "是否可用",
+        options = {
+                @LmColumnData.SelectOption(
+                        label = "是",
+                        value = "Y"
+                ),
+                @LmColumnData.SelectOption(
+                        label = "否",
+                        value = "N"
+                )
+        }
+)
+
 @LmTable(
         name = "sys_table",
         label = "表"
 )
 public class SysTable {
-    @LmColumn(label = "数据库字段名")
+    @LmColumn(label = "表名")
     private String name;
     @LmColumn(label = "页面名称")
     private String label;
     @LmColumn(label = "备注")
     private String description;
 
-    @LmColumn(label = "备注2",columnType = ColumnType.Select)
-    @LmColumnAttr()
-    private String description2;
+    @LmColumn(label = "是否可用", columnType = ColumnData.Type.Select, defVal = "Y")
+    @LmColumnData.SelectUse(code = "isActive", def = "Y")
+    private String isActive;
 
-    @LmColumn(label = "日期",columnType = ColumnType.Date)
+    @LmColumn(label = "日期", columnType = ColumnData.Type.Date)
     private Date ownerDate;
 }

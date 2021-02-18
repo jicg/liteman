@@ -1,5 +1,6 @@
 package com.jicg.os.liteman.gen.anno;
 
+import com.jicg.os.liteman.orm.system.ColumnData;
 import com.jicg.os.liteman.orm.system.ColumnType;
 
 import java.lang.annotation.ElementType;
@@ -19,7 +20,7 @@ public @interface LmColumn {
 
     String description() default "";
 
-    ColumnType columnType() default ColumnType.Auto;
+    ColumnData.Type columnType() default ColumnData.Type.Auto;
 
     String defVal() default "";
 

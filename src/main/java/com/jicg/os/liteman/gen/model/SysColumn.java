@@ -17,6 +17,11 @@ public class SysColumn {
     private String label;
     @LmColumn(label = "备注")
     private String description;
-    @LmColumnLink(tableName = "SysTable")
+    @LmColumnData.Link(tableName = "sys_table")
     private Long tableId;
+
+    @LmColumn(name = "table_id;name",label = "表 ")
+    private Long tableName;
+    @LmColumn(name = "table_id;c_store_id;name",label = "表2 ")
+    private Long tableName2;
 }

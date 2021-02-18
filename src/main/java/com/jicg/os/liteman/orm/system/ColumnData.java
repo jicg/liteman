@@ -17,6 +17,19 @@ import java.util.Set;
  * @author jicg on 2021/1/4
  */
 public class ColumnData {
+    public enum Type {
+        Int, String, Float, Boolean, Select, DateTime, Date, Clob, Auto
+    }
+
+
+    @Embeddable
+    @Data
+    public static class SelectUse {
+        @OneToOne
+        private ColumnData.Select columnSelect;
+        private String columnSelectDef = "";
+    }
+
     @EqualsAndHashCode(callSuper = true)
     @Data
     @Entity
@@ -26,7 +39,7 @@ public class ColumnData {
         @LazyCollection(LazyCollectionOption.FALSE)
         @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
         @JoinColumn(name = "select_id")
-        private Set<SelectOption> buttonEntityList = new HashSet<>();
+        private Set<SelectOption> selectOptions = new HashSet<>();
     }
 
     @EqualsAndHashCode(callSuper = true)

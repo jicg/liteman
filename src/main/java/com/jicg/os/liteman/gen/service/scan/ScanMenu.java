@@ -1,28 +1,21 @@
 package com.jicg.os.liteman.gen.service.scan;
 
-import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.jicg.os.liteman.gen.anno.*;
 import com.jicg.os.liteman.gen.service.LmService;
 import com.jicg.os.liteman.orm.repository.MenuRepository;
 import com.jicg.os.liteman.orm.system.MenuEntity;
 import com.jicg.os.liteman.orm.system.SubSystemEntity;
+import com.jicg.os.liteman.utils.ScanUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.stereotype.Component;
 
-import java.awt.*;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.sun.xml.internal.xsom.impl.UName.comparator;
+import static com.jicg.os.liteman.utils.ScanUtils.*;
 
 /**
  * @author jicg on 2021/1/13
@@ -50,12 +43,12 @@ public class ScanMenu {
         List<SubSystemEntity> scanSubSystemEntities = new ArrayList<>();
         for (String basePackage : LmService.basePackages) {
 
-            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmSubSystem.class)) {
+            for (BeanDefinition beanDefinition : ScanUtils.getScanBean(basePackage, LmSubSystem.class)) {
                 Class<?> beanClazz = Class.forName(beanDefinition.getBeanClassName());
                 LmSubSystem lmSubSystem = beanClazz.getAnnotation(LmSubSystem.class);
                 scanSubSystemEntities.add(getSubSystem(lmSubSystem, beanClazz));
             }
-            for (BeanDefinition beanDefinition : getScanBean(basePackage, LmMenuDirs.class, LmMenuDir.class, LmMenus.class, LmMenu.class)) {
+            for (BeanDefinition beanDefinition : ScanUtils.getScanBean(basePackage, LmMenuDirs.class, LmMenuDir.class, LmMenus.class, LmMenu.class)) {
                 Class<?> beanClazz = Class.forName(beanDefinition.getBeanClassName());
                 List<MenuEntity> menus = new ArrayList<>();
                 LmMenuDir[] lmMenuDirs = beanClazz.getAnnotationsByType(LmMenuDir.class);
@@ -155,14 +148,14 @@ public class ScanMenu {
         ).collect(Collectors.groupingBy(MenuEntity::getSystemCode));
     }
 
-    public Set<BeanDefinition> getScanBean(String basePackage, Class<? extends Annotation>... annotationTypes) {
-        ClassPathScanningCandidateComponentProvider scanningCandidateComponentProvider =
-                new ClassPathScanningCandidateComponentProvider(false);
-        for (Class<? extends Annotation> annotationType : annotationTypes) {
-            scanningCandidateComponentProvider.addIncludeFilter(new AnnotationTypeFilter(annotationType));
-        }
-        return scanningCandidateComponentProvider.findCandidateComponents(basePackage);
-    }
+//    public Set<BeanDefinition> getScanBean(String basePackage, Class<? extends Annotation>... annotationTypes) {
+//        ClassPathScanningCandidateComponentProvider scanningCandidateComponentProvider =
+//                new ClassPathScanningCandidateComponentProvider(false);
+//        for (Class<? extends Annotation> annotationType : annotationTypes) {
+//            scanningCandidateComponentProvider.addIncludeFilter(new AnnotationTypeFilter(annotationType));
+//        }
+//        return scanningCandidateComponentProvider.findCandidateComponents(basePackage);
+//    }
 
 //    public void sort(List<MenuEntity> entities) {
 //        entities.sort((o1, o2) -> (int) (o1.getSort() - o2.getSort()));
