@@ -3,9 +3,11 @@ package com.jicg.os.liteman.gen.service;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.db.DbUtil;
 import cn.hutool.db.Entity;
+import cn.hutool.json.JSONUtil;
 import com.jicg.os.liteman.orm.system.ColumnData;
 import com.jicg.os.liteman.orm.system.ColumnEntity;
 import com.jicg.os.liteman.orm.system.TableEntity;
+import com.jicg.os.liteman.utils.StringUtils;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,9 @@ import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * @author jicg on 2021/2/16
@@ -26,15 +31,12 @@ public class ObjectService {
 
     private final DataSource dataSource;
 
-    private final EntityManager entityManager;
-
     private final LmService lmService;
 
 
-    public ObjectService(LmService lmService, DataSource dataSource, EntityManager entityManager) {
+    public ObjectService(LmService lmService, DataSource dataSource) {
         this.lmService = lmService;
         this.dataSource = dataSource;
-        this.entityManager = entityManager;
     }
 
     public List<Entity> getData() throws SQLException {
@@ -44,7 +46,6 @@ public class ObjectService {
     public void test(Entity entity) throws SQLException {
         entity.setTableName("table_entity");
         log.error(entity.toString());
-
         DbUtil.use(dataSource).insert(entity);
     }
 
@@ -53,95 +54,110 @@ public class ObjectService {
         List<Entity> arrayList = new ArrayList<Entity>();
         TableEntity tableEntity = lmService.getTable(tableName);
         if (tableEntity == null) return arrayList;
-        SqlTable sqlTable = new SqlTable(tableEntity);
-        init(sqlTable);
-        toSql(sqlTable);
+        SqlTable sqlTable = new SqlTable(tableEntity, lmService::getTable);
+        sqlTable.toSql();
         return arrayList;
     }
 
-    private void toSql(SqlTable sqlTable) {
-//        TemplateUtil.createEngine().getTemplate("data/convert.ftl")
-//                .render(
-//                        MapUtil.builder(new HashMap<String, Object>())
-//                                .put("table", sqlTable).build());
-        StringBuffer ss = new StringBuffer("select ");
-        StringBuffer ts = new StringBuffer("from  ");
 
-        Map<String, String> alias = new HashMap<>();
-        AtomicInteger index = new AtomicInteger(1);
-        ts.append(sqlTable.getTable().getName()).append(" t ");
-        sqlTable.sqlTableLinks.forEach((s, sqlTableLink) -> {
-            String[] strs = getAllSplitStr(s);
-            for (int i = 0; i < strs.length; i++) {
-                String str = strs[i];
-                if (!alias.containsKey(str)) {
-                    SqlTableLink tableLink = sqlTable.sqlTableLinks.get(str);
-                    String talias = "t" + index.getAndIncrement();
-                    String upStr = str.contains(";") ? str.substring(0, str.lastIndexOf(";")) : "";
-                    String upAlias = StrUtil.isEmpty(upStr) ? " t" : alias.get(upStr);
-                    ts.append(" left join ")
-                            .append(tableLink.getLinkTable().getName()).append(" ").append(talias)
-                            .append(" on ( ").append(talias).append(".id = ").append(upAlias).append(".").append(tableLink.getMainColumn().getName()).append(") ");
-                    alias.put(str, talias);
-                }
-            }
-
-        });
-        log.error(ts.toString());
-    }
-
-
-    public void init(SqlTable sqlTable) {
-        for (ColumnEntity column : sqlTable.table.getColumnEntityList()) {
-            SqlColumnInfo sqlColumnInfo = new SqlColumnInfo(sqlTable, column);
-            String[] keys = sqlColumnInfo.getColumnLinkNames();
-            if (keys.length > 0) {
-                TableEntity mainTable = sqlTable.table;
-                ColumnEntity mainColumn = column;
-                TableEntity linkTable = null;
-                for (String key : keys) {
-                    if (sqlTable.sqlTableLinks.containsKey(key)){
-                         mainTable = sqlTable.sqlTableLinks.get(key).mainTable;
-                         mainColumn = sqlTable.sqlTableLinks.get(key).mainColumn;
-                        continue;
-                    }
-                    String lastTableName = key.contains(";") ? key.substring(key.lastIndexOf(";") + 1) : key;
-
-                    Optional<ColumnEntity> linkColumnOpt = mainTable.getColumnEntityList().stream().filter(c -> c.getName().equals(lastTableName)).findFirst();
-                    if (!linkColumnOpt.isPresent())
-                        throw new RuntimeException("关联失败：表：" + mainTable.getName() + " 字段：" + mainColumn.getName() + ", 没法关联 。" + lastTableName);
-                    mainColumn = linkColumnOpt.get();
-                    ColumnData.ColumnLink columnLink = mainColumn.getColumnLink();
-                    if (columnLink == null)
-                        throw new RuntimeException("关联失败：表：" + mainTable.getName() + " 字段：" + mainColumn.getName() + ", 没法关联 。"
-                                + "字段" + mainColumn.getName() + " 未定义关联关系");
-
-                    linkTable = lmService.getTable(columnLink.getTableName());
-                    if (linkTable == null) {
-                        throw new RuntimeException("关联失败：表：" + sqlTable.table.getName() + " 字段：" + mainColumn.getName() + ", 没法关联 。"
-                                + " 关联表 ：" + columnLink.getTableName() + " 未定义");
-                    }
-                    sqlTable.sqlTableLinks.put(key, new SqlTableLink(mainTable, mainColumn, linkTable));
-                    mainTable = linkTable;
-                }
-            }
-            sqlTable.columnInfos.add(sqlColumnInfo);
-        }
-    }
-
-    @NoArgsConstructor
     @Data
     public static class SqlTable {
 
         TableEntity table;
+        Function<String, TableEntity> func;
 
-        public SqlTable(TableEntity table) {
+        public SqlTable(TableEntity table, Function<String, TableEntity> func) {
             this.table = table;
+            this.func = func;
+            init();
+        }
+
+        public void init() {
+            for (ColumnEntity column : table.getColumnEntityList()) {
+                String str = StringUtils.commaRemoveLast(column.getName());
+                if (column.getColumnLink() != null) {
+                    str = column.getName();
+                }
+                String[] keys = StringUtils.commaSplit(str);
+                for (int i = 0; i < keys.length; i++) {
+                    String key = keys[i];
+                    if (StrUtil.isNotEmpty(key) && !linkColumnNames.contains(key)) {
+                        linkColumnNames.add(key);
+                    }
+                }
+
+            }
+            linkColumnNames.sort(String::compareTo);
+
+
+            for (ColumnEntity column : table.getColumnEntityList()) {
+                SqlColumnInfo sqlColumnInfo = new SqlColumnInfo(this, column);
+                columnInfos.add(sqlColumnInfo);
+                if (column.getColumnLink() != null) {
+                    ColumnData.ColumnLink columnLink = column.getColumnLink();
+                    TableEntity linkTable = func.apply(columnLink.getTableName());
+                    if (linkTable == null) {
+                        throw new RuntimeException("关联失败：表：" + table.getName() + " 字段：" + column.getName() + ", 没法关联 。"
+                                + " 关联表 ：" + columnLink.getTableName() + " 未定义");
+                    }
+                    ColumnEntity linkColumn = linkTable.getColumnEntityList().stream().filter(c -> c.getName().equalsIgnoreCase(columnLink.getColumnName())).findFirst().orElse(null);
+                    sqlTableLinks.put(column.getName(), new SqlTableLink(table, column, linkTable, linkColumn));
+                }
+            }
+
+//        List<String> linkColumnNames = (columnNames == null || columnNames.size() == 0) ? sqlTable.linkColumnNames : columnNames;
+            for (String key : linkColumnNames) {
+                if (sqlTableLinks.containsKey(key)) continue;
+                SqlTableLink sqlTableLinkUp = sqlTableLinks.get(StringUtils.commaRemoveLast(key));
+                String lastTableName = StringUtils.commaLast(key);
+
+                TableEntity mainTable = sqlTableLinkUp.linkTable;
+                ColumnEntity mainColumn = mainTable.getColumnEntityList().stream().filter(c -> c.getName().equalsIgnoreCase(lastTableName)).findFirst().orElseThrow(
+                        () -> new RuntimeException("关联失败：表：" + mainTable.getName() + " 字段：" + lastTableName + " 不存在！ 。")
+                );
+                ColumnData.ColumnLink columnLink = mainColumn.getColumnLink();
+                if (columnLink == null)
+                    throw new RuntimeException("关联失败：表：" + mainTable.getName() + " 字段：" + mainColumn.getName() + ", 没法关联 。"
+                            + "字段" + mainColumn.getName() + " 未定义关联关系");
+
+                TableEntity linkTable = func.apply(columnLink.getTableName());
+                if (linkTable == null) {
+                    throw new RuntimeException("关联失败：表：" + table.getName() + " 字段：" + mainColumn.getName() + ", 没法关联 。"
+                            + " 关联表 ：" + columnLink.getTableName() + " 未定义 ");
+                }
+                ColumnEntity linkColumn = linkTable.getColumnEntityList().stream().filter(c -> c.getName().equalsIgnoreCase(columnLink.getColumnName())).findFirst().orElse(null);
+                sqlTableLinks.put(key, new SqlTableLink(mainTable, mainColumn, linkTable, linkColumn));
+            }
         }
 
         private List<SqlColumnInfo> columnInfos = new ArrayList<>();
         private List<WhereColumnInfo> whereColumnInfos = new ArrayList<>();
+        private List<String> linkColumnNames = new ArrayList<>();
         private Map<String, SqlTableLink> sqlTableLinks = new HashMap<>();
+
+
+        private void toSql() {
+            SqlTable sqlTable = this;
+            StringBuffer ss = new StringBuffer("select ");
+            StringBuffer ts = new StringBuffer("from  ");
+            Map<String, String> alias = new HashMap<>();
+            AtomicInteger index = new AtomicInteger(1);
+            ts.append(sqlTable.getTable().getName()).append(" t ");
+            sqlTable.linkColumnNames.forEach((str) -> {
+                if (!alias.containsKey(str)) {
+                    SqlTableLink tableLink = sqlTable.sqlTableLinks.get(str);
+                    String talias = "t" + index.getAndIncrement();
+                    String upStr = StringUtils.commaRemoveLast(str);
+                    String upAlias = StrUtil.isEmpty(upStr) ? " t" : alias.get(upStr);
+                    ts.append(" left join ")
+                            .append(tableLink.getLinkTable().getName()).append(" ").append(talias)
+                            .append(" on ( ").append(talias).append(".").append(tableLink.linkColumn == null ? "id" : tableLink.linkColumn.getName()).append(" = ").append(upAlias).append(".").append(tableLink.getMainColumn().getName()).append(") ");
+                    alias.put(str, talias);
+                }
+            });
+            log.error(ts.toString());
+        }
+
     }
 
 
@@ -151,12 +167,14 @@ public class ObjectService {
         private TableEntity mainTable;
         private ColumnEntity mainColumn;
         private TableEntity linkTable;
+        private ColumnEntity linkColumn;
 
 
-        public SqlTableLink(TableEntity mainTable, ColumnEntity mainColumn, TableEntity linkTable) {
+        public SqlTableLink(TableEntity mainTable, ColumnEntity mainColumn, TableEntity linkTable, ColumnEntity linkColumn) {
             this.mainTable = mainTable;
             this.mainColumn = mainColumn;
             this.linkTable = linkTable;
+            this.linkColumn = linkColumn;
         }
     }
 
@@ -171,23 +189,12 @@ public class ObjectService {
             this.column = column;
         }
 
-        //        private TableEntity table;
-//        private ColumnEntity column;
-//
-//        public SqlColumnInfo(SqlTable table, ColumnEntity column) {
-//            this.table = table.table;
-//            this.column = column;
-//        }
         public String getColumnLinkName() {
-            int index = column.getName().lastIndexOf(";");
-            if (index <= 0) return "";
-            return column.getName().substring(0, index);
+            return StringUtils.commaRemoveLast(column.getName());
         }
 
         public String getColumnName() {
-            int index = column.getName().lastIndexOf(";");
-            if (index <= 0) return column.getName();
-            return column.getName().substring(index + 1);
+            return StringUtils.commaLast(column.getName());
         }
 
         public String[] getColumnLinkNames() {
@@ -195,15 +202,7 @@ public class ObjectService {
                 return new String[]{column.getName()};
             }
             if (column.getName() == null || !column.getName().contains(";")) return new String[]{};
-            StringBuilder str = new StringBuilder();
-            String[] cols = column.getName().split(";");
-            String[] strs = new String[cols.length - 1];
-            for (int i = 0; i < cols.length - 1; i++) {
-                str.append(cols[i]);
-                strs[i] = str.toString();
-                str.append(";");
-            }
-            return strs;
+            return StringUtils.commaSplit(StringUtils.commaRemoveLast(column.getName()));
         }
 
     }
@@ -227,17 +226,5 @@ public class ObjectService {
         }
     }
 
-
-    public static String[] getAllSplitStr(String s) {
-        StringBuilder str = new StringBuilder();
-        String[] cols = s.split(";");
-        String[] strs = new String[cols.length];
-        for (int i = 0; i < cols.length; i++) {
-            str.append(cols[i]);
-            strs[i] = str.toString();
-            str.append(";");
-        }
-        return strs;
-    }
 
 }

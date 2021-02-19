@@ -18,4 +18,8 @@ import java.util.Date;
 public class SysTest {
     @LmColumn(label = "测试名称")
     private String name;
+
+    @LmColumn(label = "测试名称2")
+    @LmColumnData.Link(tableName = "sys_table")
+    private String name2;
 }

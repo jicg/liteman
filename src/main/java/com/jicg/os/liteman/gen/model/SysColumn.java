@@ -22,6 +22,6 @@ public class SysColumn {
 
     @LmColumn(name = "table_id;name",label = "表 ")
     private Long tableName;
-    @LmColumn(name = "table_id;sys_test_id;name",label = "表2 ")
+    @LmColumn(name = "table_id;sys_test_id;name2;name",label = "表2 ")
     private Long tableName2;
 }
